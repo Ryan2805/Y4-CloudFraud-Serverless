@@ -1,0 +1,28 @@
+name: CloudFraud CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  validate-python:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Check Python syntax
+        run: |
+          python -m compileall .
+
+      - name: Validate Step Functions JSON
+        run: |
+          python -m json.tool step-functions/CloudFraudWorkFlow.json
