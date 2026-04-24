@@ -25,6 +25,6 @@ jobs:
 
       - name: Validate Step Functions JSON
         run: |
-          for file in step-functions/*.json; do
-            python -m json.tool "$file"
+          for file in cloudfraud-serverless/step-functions/*.json; do
+          python -m json.tool "$file"
           done
