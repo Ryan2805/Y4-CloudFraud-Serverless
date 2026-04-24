@@ -1,0 +1,229 @@
+{
+  "Comment": "CloudFraud transaction fraud detection workflow with asynchronous review processing",
+  "StartAt": "ValidateTransaction",
+  "States": {
+    "ValidateTransaction": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-validate-transaction",
+      "Next": "FetchCustomerProfile",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "FetchCustomerProfile": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-fetch-customer-profile",
+      "Next": "FetchRecentTransactions",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "FetchRecentTransactions": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-fetch-recent-transactions",
+      "Next": "RiskScoring",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "RiskScoring": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-risk-scoring",
+      "Next": "DecisionHandler",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "DecisionHandler": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-decision-handler",
+      "Next": "DecisionChoice",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "DecisionChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.decision",
+          "StringEquals": "APPROVED",
+          "Next": "StoreApprovedTransaction"
+        },
+        {
+          "Variable": "$.decision",
+          "StringEquals": "FLAGGED",
+          "Next": "CreateReviewTask"
+        },
+        {
+          "Variable": "$.decision",
+          "StringEquals": "REJECTED",
+          "Next": "StoreRejectedTransaction"
+        }
+      ],
+      "Default": "WorkflowFailed"
+    },
+    "CreateReviewTask": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-create-review-task",
+      "Next": "ReviewWait",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "ReviewWait": {
+      "Type": "Wait",
+      "Seconds": 10,
+      "Next": "CheckReviewResult"
+    },
+    "CheckReviewResult": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-check-review-result",
+      "Next": "ApplyReviewDecision",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "ApplyReviewDecision": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-apply-review-decision",
+      "Next": "StoreFlaggedTransaction",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "StoreApprovedTransaction": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-store-transaction",
+      "Next": "SendApprovedNotification",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "SendApprovedNotification": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-send-notification",
+      "End": true,
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "StoreFlaggedTransaction": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-store-transaction",
+      "Next": "SendFlaggedNotification",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "SendFlaggedNotification": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-send-notification",
+      "End": true,
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "StoreRejectedTransaction": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-store-transaction",
+      "Next": "SendRejectedNotification",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "SendRejectedNotification": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-1:637423256770:function:cloudfraud-send-notification",
+      "End": true,
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "WorkflowFailed"
+        }
+      ]
+    },
+    "WorkflowFailed": {
+      "Type": "Fail",
+      "Error": "WorkflowExecutionFailed",
+      "Cause": "A workflow state failed"
+    }
+  }
+}
