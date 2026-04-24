@@ -25,4 +25,6 @@ jobs:
 
       - name: Validate Step Functions JSON
         run: |
-          python -m json.tool step-functions/CloudFraudWorkFlow.json
+          for file in step-functions/*.json; do
+            python -m json.tool "$file"
+          done
