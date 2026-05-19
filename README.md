@@ -23,7 +23,7 @@ The platform follows a scalable serverless architecture designed for resilience,
 
 # Architecture Diagram
 
-![CloudFraud Architecture](./architectureDiagram.png)
+![CloudFraud Architecture](./architecturediagram.png)
 
 ---
 
